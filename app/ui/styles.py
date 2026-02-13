@@ -8,6 +8,11 @@ Streamlit 自定义样式配置
 - 卡片色：#FFFFFF（纯白）
 - 涨色：#E74C3C（红色）
 - 跌色：#27AE60（绿色）
+
+响应式设计：
+- 桌面端（>1024px）：完整布局
+- 平板端（768px-1024px）：适度调整
+- 手机端（<768px）：垂直布局、增大触摸区域
 """
 
 import streamlit as st
@@ -15,7 +20,7 @@ from decimal import Decimal
 
 
 def apply_custom_theme():
-    """应用淡蓝白色金融主题"""
+    """应��淡蓝白色金融主题（含完整响应式支持）"""
 
     custom_css = """
     <style>
@@ -120,6 +125,7 @@ def apply_custom_theme():
         font-size: 0.9rem;
         transition: all 0.2s ease;
         border: 1px solid transparent;
+        min-height: 44px;
     }
 
     .stButton button[kind="primary"] {
@@ -159,6 +165,7 @@ def apply_custom_theme():
         font-weight: 500;
         color: #7B8B9E;
         font-size: 0.9rem;
+        min-height: 44px;
     }
 
     .stTabs [data-baseweb="tab"]:hover {
@@ -186,6 +193,7 @@ def apply_custom_theme():
         border-radius: 10px;
         border: 1px solid #D1D9E0;
         font-size: 0.95rem;
+        min-height: 44px;
     }
 
     .stTextInput input:focus,
@@ -207,6 +215,7 @@ def apply_custom_theme():
     .stSelectbox div[data-baseweb="select"] > div {
         border-radius: 10px;
         border: 1px solid #D1D9E0;
+        min-height: 44px;
     }
 
     .stSelectbox div[data-baseweb="select"] > div:focus-within {
@@ -218,6 +227,7 @@ def apply_custom_theme():
     .stDateInput input {
         border-radius: 10px;
         border: 1px solid #D1D9E0;
+        min-height: 44px;
     }
 
     .stDateInput input:focus {
@@ -257,6 +267,7 @@ def apply_custom_theme():
         border-radius: 12px;
         font-weight: 500;
         color: #4A5568;
+        min-height: 48px;
     }
 
     .streamlit-expanderHeader:hover {
@@ -287,6 +298,7 @@ def apply_custom_theme():
         background-color: #FFFFFF;
         color: #4A90D9;
         border: 1px solid #4A90D9;
+        min-height: 44px;
     }
 
     .stDownloadButton button:hover {
@@ -344,13 +356,164 @@ def apply_custom_theme():
         border-bottom: 1px solid #E8EDF2;
     }
 
-    /* ===== 响应式 ===== */
-    @media (max-width: 768px) {
+    /* ===== 平板端响应式（768px - 1024px）===== */
+    @media (max-width: 1024px) {
         .main .block-container {
-            padding-left: 0.8rem;
-            padding-right: 0.8rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
-        h1 { font-size: 1.3rem !important; }
+
+        h1 { font-size: 1.4rem !important; }
+
+        .stTabs [data-baseweb="tab"] {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+    }
+
+    /* ===== 手机端响应式（<768px）===== */
+    @media (max-width: 768px) {
+        /* 全局调整 */
+        .main .block-container {
+            padding-left: 0.6rem;
+            padding-right: 0.6rem;
+            padding-top: 1rem;
+        }
+
+        h1 { font-size: 1.25rem !important; }
+        h2 { font-size: 1.05rem; }
+        h3 { font-size: 0.95rem; }
+
+        /* 按钮触摸区域 */
+        .stButton button {
+            min-height: 48px;
+            font-size: 0.95rem;
+        }
+
+        /* Tab 标签紧凑化 */
+        .stTabs [data-baseweb="tab-list"] {
+            border-radius: 10px;
+            padding: 3px;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.8rem;
+            min-height: 44px;
+        }
+
+        /* 输入框触摸友好 */
+        .stTextInput input,
+        .stNumberInput input,
+        .stDateInput input {
+            min-height: 48px;
+            font-size: 1rem;
+        }
+
+        .stSelectbox div[data-baseweb="select"] > div {
+            min-height: 48px;
+        }
+
+        /* Metric 卡片紧凑 */
+        [data-testid="stMetric"] {
+            padding: 0.8rem 1rem;
+        }
+
+        [data-testid="stMetric"] > div {
+            font-size: 1.1rem;
+        }
+
+        /* 数据表格横向滚动提示 */
+        .stDataFrame::before {
+            content: "← 左右滑动查看更多 →";
+            display: block;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #A0AEC0;
+            padding: 0.3rem 0;
+            background: #F5F7FA;
+        }
+
+        /* 侧边栏优化 */
+        section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
+            padding: 0.8rem 1rem;
+            font-size: 1rem;
+            min-height: 48px;
+        }
+
+        /* 展开面板触摸友好 */
+        .streamlit-expanderHeader {
+            min-height: 52px;
+            font-size: 0.95rem;
+        }
+    }
+
+    /* ===== 小屏手机（<480px）===== */
+    @media (max-width: 480px) {
+        .main .block-container {
+            padding-left: 0.4rem;
+            padding-right: 0.4rem;
+        }
+
+        h1 { font-size: 1.1rem !important; }
+
+        .stTabs [data-baseweb="tab"] {
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
+        }
+
+        [data-testid="stMetric"] {
+            padding: 0.7rem 0.8rem;
+        }
+
+        [data-testid="stMetric"] > label {
+            font-size: 0.72rem;
+        }
+
+        [data-testid="stMetric"] > div {
+            font-size: 1rem;
+        }
+    }
+
+    /* ===== 自定义卡片移动端适配类 ===== */
+    .mobile-hero-card {
+        padding: 1.2rem 1rem;
+    }
+
+    .mobile-fund-card {
+        padding: 1rem;
+    }
+
+    .mobile-fund-card-footer {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .mobile-fund-card-footer > div {
+        flex: 0 0 calc(33.33% - 0.3rem);
+        text-align: center;
+        padding: 0.4rem 0;
+    }
+
+    @media (max-width: 768px) {
+        .mobile-hero-card {
+            padding: 1.2rem 0.8rem !important;
+        }
+
+        .mobile-hero-card .hero-value {
+            font-size: 1.8rem !important;
+        }
+
+        .mobile-fund-card-footer {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.3rem;
+        }
+
+        .mobile-fund-card-footer > div:nth-child(4),
+        .mobile-fund-card-footer > div:nth-child(5) {
+            grid-column: span 1;
+        }
     }
     </style>
     """
@@ -359,12 +522,12 @@ def apply_custom_theme():
 
 
 # ============================================================
-# 自定义 HTML 组件 - 养基宝风格
+# 自定义 HTML 组件 - 养基宝风格（含移动端适配）
 # ============================================================
 
 def render_hero_card(total_value, total_cost, total_profit, total_profit_rate,
                      yesterday_profit, yesterday_rate, today_profit, today_rate):
-    """渲染顶部资产总览 Hero 卡片（渐变蓝色背景）"""
+    """渲染顶部资产总览 Hero 卡片（渐变蓝色背景，移动端适配）"""
 
     # 格式化数值
     value_str = f"{total_value:,.2f}" if total_value > 0 else "--"
@@ -376,14 +539,13 @@ def render_hero_card(total_value, total_cost, total_profit, total_profit_rate,
     today_rate_str = f"{today_rate:+.2f}%" if today_profit != 0 else ""
 
     html = (
-        f'<div style="background:linear-gradient(135deg,#4A90D9 0%,#6CB2EB 100%); border-radius:16px; padding:1.8rem 2rem; margin-bottom:1.5rem; color:white; box-shadow:0 4px 16px rgba(74,144,217,0.25);">'
+        f'<div class="mobile-hero-card" style="background:linear-gradient(135deg,#4A90D9 0%,#6CB2EB 100%); border-radius:16px; padding:1.8rem 2rem; margin-bottom:1.5rem; color:white; box-shadow:0 4px 16px rgba(74,144,217,0.25);">'
         f'<div style="font-size:0.85rem; opacity:0.85; margin-bottom:4px;">总资产（元）</div>'
-        f'<div style="font-size:2.4rem; font-weight:700; letter-spacing:-1px; margin-bottom:0.5rem;">{value_str}</div>'
-        f'<div style="display:flex; gap:1.5rem; align-items:center; margin-bottom:1rem;">'
+        f'<div class="hero-value" style="font-size:2.4rem; font-weight:700; letter-spacing:-1px; margin-bottom:0.5rem;">{value_str}</div>'
+        f'<div style="display:flex; flex-wrap:wrap; gap:0.8rem 1.5rem; align-items:center; margin-bottom:1rem;">'
         f'<div><span style="font-size:0.8rem; opacity:0.8;">累计收益</span>'
         f'<span style="font-size:1rem; font-weight:600; margin-left:6px;">{profit_str}</span>'
         f'<span style="font-size:0.85rem; opacity:0.9; margin-left:4px;">{rate_str}</span></div>'
-        f'<div style="opacity:0.4;">|</div>'
         f'<div><span style="font-size:0.8rem; opacity:0.8;">总成本</span>'
         f'<span style="font-size:1rem; font-weight:600; margin-left:6px;">{total_cost:,.2f}</span></div>'
         f'</div>'
@@ -407,7 +569,7 @@ def render_hero_card(total_value, total_cost, total_profit, total_profit_rate,
 def render_fund_card(fund_name, fund_code, market_value, total_cost,
                      profit, profit_rate, shares, avg_cost, current_nav,
                      nav_date, yesterday_return, today_growth):
-    """渲染单只基金持仓卡片"""
+    """渲染单只基金持仓卡片（移动端适配）"""
 
     # 收益颜色（红涨绿跌）
     if isinstance(profit, (int, float, Decimal)) and profit != 0:
@@ -451,18 +613,18 @@ def render_fund_card(fund_name, fund_code, market_value, total_cost,
     nav_date_str = str(nav_date) if nav_date and nav_date != "-" else ""
 
     html = (
-        f'<div style="background:#FFFFFF; border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:0.8rem; border:1px solid #E8EDF2; box-shadow:0 1px 4px rgba(0,0,0,0.03);">'
+        f'<div class="mobile-fund-card" style="background:#FFFFFF; border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:0.8rem; border:1px solid #E8EDF2; box-shadow:0 1px 4px rgba(0,0,0,0.03);">'
         f'<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.8rem;">'
-        f'<div>'
-        f'<div style="font-size:1rem; font-weight:600; color:#2C3E50;">{fund_name}</div>'
+        f'<div style="flex:1; min-width:0;">'
+        f'<div style="font-size:1rem; font-weight:600; color:#2C3E50; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{fund_name}</div>'
         f'<div style="font-size:0.8rem; color:#A0AEC0; margin-top:2px;">{fund_code}</div>'
         f'</div>'
-        f'<div style="text-align:right;">'
+        f'<div style="text-align:right; margin-left:0.8rem; flex-shrink:0;">'
         f'<div style="font-size:1.1rem; font-weight:700; color:#2C3E50;">{mv_str}</div>'
         f'<div style="font-size:0.82rem; color:{profit_color}; font-weight:600; margin-top:2px;">{profit_str} {rate_str}</div>'
         f'</div>'
         f'</div>'
-        f'<div style="display:flex; justify-content:space-between; padding-top:0.7rem; border-top:1px solid #F0F4F8; font-size:0.78rem; color:#7B8B9E;">'
+        f'<div class="mobile-fund-card-footer" style="display:flex; justify-content:space-between; padding-top:0.7rem; border-top:1px solid #F0F4F8; font-size:0.78rem; color:#7B8B9E;">'
         f'<div style="text-align:center; flex:1;"><div>净值</div><div style="color:#2C3E50; font-weight:600; margin-top:2px;">{nav_str}</div></div>'
         f'<div style="text-align:center; flex:1;"><div>份额</div><div style="color:#2C3E50; font-weight:600; margin-top:2px;">{float(shares):,.2f}</div></div>'
         f'<div style="text-align:center; flex:1;"><div>成本</div><div style="color:#2C3E50; font-weight:600; margin-top:2px;">{float(avg_cost):.4f}</div></div>'
@@ -527,13 +689,13 @@ def render_holding_card(fund_name, fund_code, total_shares, avg_cost,
                         total_cost, first_buy_date, current_nav=None,
                         nav_date=None, market_value=None, profit=None,
                         profit_rate=None):
-    """渲染持仓管理的基金卡片"""
+    """渲染持仓管理的基金卡片（移动端适配）"""
 
     # 收益信息
     if profit is not None:
         profit_color = "#E74C3C" if profit > 0 else "#27AE60" if profit < 0 else "#7B8B9E"
         profit_html = (
-            f'<div style="display:flex; gap:1.5rem; padding-top:0.8rem; border-top:1px solid #F0F4F8; margin-top:0.8rem;">'
+            f'<div style="display:flex; flex-wrap:wrap; gap:0.8rem 1.5rem; padding-top:0.8rem; border-top:1px solid #F0F4F8; margin-top:0.8rem;">'
             f'<div><div style="font-size:0.75rem; color:#A0AEC0;">最新净值</div>'
             f'<div style="font-size:0.95rem; font-weight:600; color:#2C3E50; margin-top:2px;">{current_nav:.4f}'
             f'<span style="font-size:0.72rem; color:#A0AEC0; margin-left:4px;">{nav_date}</span></div></div>'
@@ -550,12 +712,12 @@ def render_holding_card(fund_name, fund_code, total_shares, avg_cost,
     html = (
         f'<div style="background:#FFFFFF; border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:0.8rem; border:1px solid #E8EDF2; box-shadow:0 1px 4px rgba(0,0,0,0.03);">'
         f'<div style="display:flex; justify-content:space-between; align-items:flex-start;">'
-        f'<div><div style="font-size:1.05rem; font-weight:600; color:#2C3E50;">{fund_name}</div>'
+        f'<div style="flex:1; min-width:0;"><div style="font-size:1.05rem; font-weight:600; color:#2C3E50; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{fund_name}</div>'
         f'<div style="font-size:0.78rem; color:#A0AEC0; margin-top:2px;">{fund_code}</div></div>'
-        f'<div style="text-align:right;"><div style="font-size:0.75rem; color:#A0AEC0;">总投入</div>'
+        f'<div style="text-align:right; margin-left:0.8rem; flex-shrink:0;"><div style="font-size:0.75rem; color:#A0AEC0;">总投入</div>'
         f'<div style="font-size:1.1rem; font-weight:700; color:#2C3E50;">{float(total_cost):,.2f}</div></div>'
         f'</div>'
-        f'<div style="display:flex; gap:1.5rem; margin-top:0.8rem; font-size:0.82rem; color:#7B8B9E;">'
+        f'<div style="display:flex; flex-wrap:wrap; gap:0.5rem 1.5rem; margin-top:0.8rem; font-size:0.82rem; color:#7B8B9E;">'
         f'<div>份额 <span style="color:#2C3E50; font-weight:600;">{float(total_shares):,.2f}</span></div>'
         f'<div>成本价 <span style="color:#2C3E50; font-weight:600;">{float(avg_cost):.4f}</span></div>'
         f'<div>首次买入 <span style="color:#2C3E50; font-weight:600;">{first_buy_date}</span></div>'
