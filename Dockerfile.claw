@@ -1,0 +1,29 @@
+# ClawCloud 轻量级部署 Dockerfile
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 安装依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制项目文件
+COPY app/ ./app/
+COPY scripts/ ./scripts/
+
+# 创建数据目录
+RUN mkdir -p /app/data /app/reports
+
+# 环境变量
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# ClawCloud 启动脚本
+COPY claw-entrypoint.sh /claw-entrypoint.sh
+RUN chmod +x /claw-entrypoint.sh
+
+# 暴露端口
+EXPOSE 8501
+
+ENTRYPOINT ["/claw-entrypoint.sh"]
