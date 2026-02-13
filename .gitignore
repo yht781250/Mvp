@@ -1,0 +1,160 @@
+# AI基金分析助手 - Git忽略配置
+
+# ============================================
+# Python
+# ============================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# ============================================
+# 虚拟环境
+# ============================================
+.venv/
+venv/
+ENV/
+env/
+.env.local
+
+# ============================================
+# 敏感配置文件（包含密钥等）
+# ============================================
+.env
+*.env.local
+data/llm_config.json
+
+# ============================================
+# 数据库文件（包含用户数据）
+# ============================================
+data/app.db
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# ============================================
+# IDE 和编辑器
+# ============================================
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Sublime Text
+*.sublime-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# ============================================
+# 工具特定目录
+# ============================================
+# ACE Tool 索引缓存
+.ace-tool/
+
+# Streamlit 配置缓存
+.streamlit/
+
+# 运行时文件
+.runtime/
+
+# ============================================
+# 操作系统
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ============================================
+# 日志文件
+# ============================================
+*.log
+logs/
+
+# ============================================
+# 临时文件
+# ============================================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ============================================
+# 生成的报告（可选，如需版本控制可移除此项）
+# ============================================
+# reports/
+
+# ============================================
+# Claude Code 工作文件
+# ============================================
+.claude/
+.codex/
+/CLAUDE.md
+/doc/
+/reports/

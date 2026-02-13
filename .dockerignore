@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+.eggs
+dist
+build
+*.egg
+
+# Virtual environment
+.venv
+venv
+env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Local data
+data/*.db
+reports/*.md
+.runtime
+
+# Environment
+.env
+.env.local
+
+# Tests
+.pytest_cache
+htmlcov
+.coverage
