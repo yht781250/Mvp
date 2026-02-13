@@ -9,4 +9,5 @@ python-dotenv==1.0.1
 plotly==5.24.1
 requests==2.32.3
 openai==1.47.0
+httpx<0.24.0  # OpenAI SDK 兼容性：0.24.0+ 移除了 proxies 参数
 
