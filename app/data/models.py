@@ -250,6 +250,105 @@ class Report(Base):
         return f"<Report(type={self.report_type}, date={self.report_date})>"
 
 
+class ChatRole(Base):
+    """
+    AI对话角色配置表
+
+    存储自定义的AI对话角色，包括系统提示词、温度参数等。
+    支持内置角色和用户自定义角色。
+    """
+
+    __tablename__ = "chat_roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False, comment="角色名称")
+    description: Mapped[str] = mapped_column(String(200), nullable=False, comment="角色简介")
+    system_prompt: Mapped[str] = mapped_column(Text, nullable=False, comment="系统提示词")
+    is_default: Mapped[bool] = mapped_column(default=False, comment="是否默认角色")
+    is_builtin: Mapped[bool] = mapped_column(default=False, comment="是否内置角色（不可删除）")
+    temperature: Mapped[Decimal] = mapped_column(
+        Numeric(3, 2), default=Decimal("0.70"), comment="生成温度(0-1)"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, comment="创建时间"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now, comment="更新时间"
+    )
+
+    def __repr__(self) -> str:
+        return f"<ChatRole(name={self.name}, is_default={self.is_default})>"
+
+
+class ChatSession(Base):
+    """
+    AI对话会话表
+
+    每次与一只基金的对话为一个会话，包含基金信息和角色配置。
+    """
+
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(100), nullable=False, comment="会话标题")
+    fund_code: Mapped[Optional[str]] = mapped_column(String(10), comment="关联基金代码")
+    fund_name: Mapped[Optional[str]] = mapped_column(String(100), comment="关联基金名称")
+    role_name: Mapped[str] = mapped_column(String(50), nullable=False, comment="使用的角色名称")
+    message_count: Mapped[int] = mapped_column(default=0, comment="消息数量")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, comment="创建时间"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now, comment="最后活跃时间"
+    )
+
+    # 关联关系
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan",
+        order_by="ChatMessage.created_at",
+    )
+
+    __table_args__ = (
+        Index("idx_session_fund", "fund_code"),
+        Index("idx_session_updated", "updated_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ChatSession(id={self.id}, title={self.title})>"
+
+
+class ChatMessage(Base):
+    """
+    AI对话消息表
+
+    存储每轮对话的用户消息和AI回复。
+    """
+
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("chat_sessions.id"), nullable=False, comment="所属会话ID"
+    )
+    role: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment="消息角色(user/assistant)"
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False, comment="消息内容")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, comment="创建时间"
+    )
+
+    # 关联关系
+    session: Mapped["ChatSession"] = relationship(back_populates="messages")
+
+    __table_args__ = (
+        Index("idx_message_session", "session_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ChatMessage(session_id={self.session_id}, role={self.role})>"
+
+
 class TransactionType(str, Enum):
     """交易类型枚举"""
 

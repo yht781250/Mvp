@@ -16,6 +16,7 @@ from app.data.models import FundType
 from app.services import (
     fund_service, holding_service, nav_service, metrics_service,
     rules_engine, llm_service, report_service, risk_analysis_service,
+    chat_service,
 )
 from app.services.fund_data_fetcher import fetch_fund_info, fetch_nav_history
 from app.ui.styles import (
@@ -994,9 +995,9 @@ elif page == "持仓管理":
 # ============================================================
 
 elif page == "净值数据":
-    render_page_header("净值数据", "查询和更新基金净值")
+    render_page_header("净值数据", "查询和更新基金净值 / AI对话分析")
 
-    tab1, tab2 = st.tabs(["查询净值", "更新净值"])
+    tab1, tab2, tab3 = st.tabs(["查询净值", "更新净值", "AI对话分析"])
 
     with tab1:
         render_section_header("按基金代码查询净值")
@@ -1023,6 +1024,16 @@ elif page == "净值数据":
                     if not fund_info:
                         st.error(f"未找到基金：{code}")
                     else:
+                        # 将查询结果存入 session_state 供AI对话使用
+                        st.session_state["nav_query_result"] = {
+                            "fund_name": fund_info.name,
+                            "fund_code": fund_info.code,
+                            "latest_nav": float(fund_info.nav) if fund_info.nav else None,
+                            "nav_date": fund_info.nav_date.strftime("%Y-%m-%d") if fund_info.nav_date else None,
+                            "day_growth": float(fund_info.day_growth) if fund_info.day_growth else None,
+                            "query_time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        }
+
                         st.success(f"**{fund_info.name}**（{fund_info.code}）")
 
                         if fund_info.nav:
@@ -1059,6 +1070,9 @@ elif page == "净值数据":
                             st.line_chart(df_chart.set_index("日期")["单位净值"])
 
                             st.dataframe(df, use_container_width=True, hide_index=True)
+
+                            # 将净值数据存入 session_state 供AI对话使用
+                            st.session_state["nav_query_data"] = nav_data
                         else:
                             st.caption("暂无历史净值数据")
 
@@ -1146,6 +1160,330 @@ elif page == "净值数据":
                             st.dataframe(pd.DataFrame(saved_data), use_container_width=True, hide_index=True)
                         else:
                             st.caption("该基金暂无已保存的净值数据")
+
+    # ===== AI 对话分析 =====
+    with tab3:
+        render_section_header("AI 对话分析", "基于净值数据与AI多轮对话，获取专业分析参考")
+
+        # 检查 LLM 配置
+        if not llm_service.is_llm_configured():
+            st.warning("AI功能未配置，请在「系统设置 → LLM配置」中设置 API 地址、密钥和模型")
+        else:
+            # 初始化默认角色（首次访问时）
+            with get_db_context() as db:
+                chat_service.init_default_roles(db)
+
+            # ---- 角色选择区 ----
+            with get_db_context() as db:
+                all_roles = chat_service.get_all_roles(db)
+                roles_data = [
+                    {"id": r.id, "name": r.name, "description": r.description,
+                     "system_prompt": r.system_prompt, "temperature": float(r.temperature),
+                     "is_default": r.is_default, "is_builtin": r.is_builtin}
+                    for r in all_roles
+                ]
+
+            if not roles_data:
+                st.info("暂无可用角色，请先添加角色")
+            else:
+                col_role, col_info = st.columns([2, 3])
+
+                with col_role:
+                    role_options = {r["name"]: r for r in roles_data}
+                    default_names = [r["name"] for r in roles_data if r["is_default"]]
+                    default_idx = 0
+                    if default_names and default_names[0] in list(role_options.keys()):
+                        default_idx = list(role_options.keys()).index(default_names[0])
+
+                    selected_role_name = st.selectbox(
+                        "选择AI角色",
+                        options=list(role_options.keys()),
+                        index=default_idx,
+                        key="chat_role_select",
+                    )
+                    current_role = role_options[selected_role_name]
+
+                with col_info:
+                    st.markdown(f"**{current_role['name']}**")
+                    st.caption(current_role["description"])
+                    st.caption(f"温度参数：{current_role['temperature']}")
+
+                # ---- 角色管理（折叠区域） ----
+                with st.expander("角色管理"):
+                    mgmt_tab1, mgmt_tab2, mgmt_tab3 = st.tabs(["添加角色", "编辑角色", "查看提示词"])
+
+                    with mgmt_tab1:
+                        new_role_name = st.text_input("角色名称", placeholder="例如：保守型理财顾问", key="new_role_name")
+                        new_role_desc = st.text_input("角色简介", placeholder="一句话描述角色定位", key="new_role_desc")
+                        new_role_prompt = st.text_area(
+                            "系统提示词",
+                            placeholder="定义角色的专业能力、回答风格、合规要求等...",
+                            height=200,
+                            key="new_role_prompt",
+                        )
+                        new_role_temp = st.slider("温度参数", 0.0, 1.0, 0.7, 0.05, key="new_role_temp",
+                                                  help="越低越稳定保守，越高越有创造性")
+                        new_role_default = st.checkbox("设为默认角色", key="new_role_default")
+
+                        if st.button("添加角色", use_container_width=True, key="add_role_btn"):
+                            if not new_role_name or not new_role_desc or not new_role_prompt:
+                                st.error("请填写完整的角色信息")
+                            else:
+                                with get_db_context() as db:
+                                    chat_service.create_role(
+                                        db, new_role_name.strip(), new_role_desc.strip(),
+                                        new_role_prompt.strip(), new_role_temp, new_role_default,
+                                    )
+                                st.session_state["message"] = {"type": "success", "text": f"角色「{new_role_name}」创建成功"}
+                                st.rerun()
+
+                    with mgmt_tab2:
+                        if current_role["is_builtin"]:
+                            st.info("内置角色不可编辑或删除")
+                        else:
+                            edit_name = st.text_input("角色名称", value=current_role["name"], key="edit_role_name")
+                            edit_desc = st.text_input("角色简介", value=current_role["description"], key="edit_role_desc")
+                            edit_prompt = st.text_area("系统提示词", value=current_role["system_prompt"], height=200, key="edit_role_prompt")
+                            edit_temp = st.slider("温度参数", 0.0, 1.0, current_role["temperature"], 0.05, key="edit_role_temp")
+
+                            col_e1, col_e2 = st.columns(2)
+                            with col_e1:
+                                if st.button("保存修改", use_container_width=True, key="save_role_btn"):
+                                    with get_db_context() as db:
+                                        chat_service.update_role(
+                                            db, current_role["id"],
+                                            name=edit_name.strip(), description=edit_desc.strip(),
+                                            system_prompt=edit_prompt.strip(), temperature=edit_temp,
+                                        )
+                                    st.session_state["message"] = {"type": "success", "text": "角色已更新"}
+                                    st.rerun()
+                            with col_e2:
+                                if st.button("删除角色", use_container_width=True, key="delete_role_btn"):
+                                    with get_db_context() as db:
+                                        if chat_service.delete_role(db, current_role["id"]):
+                                            st.session_state["message"] = {"type": "warning", "text": f"角色「{current_role['name']}」已删除"}
+                                        else:
+                                            st.session_state["message"] = {"type": "error", "text": "删除失败（内置角色不可删除）"}
+                                    st.rerun()
+
+                    with mgmt_tab3:
+                        st.markdown(f"**{current_role['name']}** 的系统提示词：")
+                        st.markdown(current_role["system_prompt"])
+
+                st.divider()
+
+                # ---- 数据上下文区域 ----
+                nav_query_result = st.session_state.get("nav_query_result")
+                nav_query_data = st.session_state.get("nav_query_data")
+
+                if nav_query_result and nav_query_data:
+                    # 构建显示信息
+                    info_text = (
+                        f"当前数据上下文：**{nav_query_result['fund_name']}**"
+                        f"（{nav_query_result['fund_code']}）"
+                        f"，{len(nav_query_data)} 条净值记录"
+                    )
+                    if nav_query_result.get("day_growth") is not None:
+                        dg = nav_query_result["day_growth"]
+                        info_text += f" | 今日估值：{dg:+.2f}%"
+                    st.info(info_text)
+
+                    # 构建上下文，包含实时估值
+                    realtime_info = {
+                        "latest_nav": nav_query_result.get("latest_nav"),
+                        "nav_date": nav_query_result.get("nav_date"),
+                        "day_growth": nav_query_result.get("day_growth"),
+                        "query_time": nav_query_result.get("query_time"),
+                    }
+                    nav_context = chat_service.build_nav_context(
+                        nav_query_result["fund_name"],
+                        nav_query_result["fund_code"],
+                        nav_query_data,
+                        realtime_info=realtime_info,
+                    )
+                else:
+                    st.warning("暂无净值数据上下文，请先在「查询净值」中查询一只基金")
+                    nav_context = ""
+
+                # ---- 对话区域 ----
+                # 初始化对话历史和会话ID
+                if "chat_messages" not in st.session_state:
+                    st.session_state["chat_messages"] = []
+                if "chat_session_id" not in st.session_state:
+                    st.session_state["chat_session_id"] = None
+
+                # 检测基金切换，自动保存旧会话并开启新对话
+                current_chat_fund = st.session_state.get("chat_fund_code", "")
+                if nav_query_result and nav_query_result["fund_code"] != current_chat_fund:
+                    st.session_state["chat_messages"] = []
+                    st.session_state["chat_session_id"] = None
+                    st.session_state["chat_fund_code"] = nav_query_result["fund_code"]
+
+                # 操作按钮行
+                col_btn1, col_btn2, col_btn3 = st.columns([2, 2, 1])
+                with col_btn1:
+                    if st.button("新建对话", key="new_chat_btn", use_container_width=True):
+                        st.session_state["chat_messages"] = []
+                        st.session_state["chat_session_id"] = None
+                        st.rerun()
+                with col_btn2:
+                    # 导出当前对话
+                    if st.session_state["chat_messages"]:
+                        session_id = st.session_state.get("chat_session_id")
+                        if session_id:
+                            with get_db_context() as db:
+                                md_content = chat_service.export_session_markdown(db, session_id)
+                            if md_content:
+                                fund_code = nav_query_result["fund_code"] if nav_query_result else "chat"
+                                st.download_button(
+                                    "导出对话",
+                                    data=md_content,
+                                    file_name=f"chat_{fund_code}_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
+                                    mime="text/markdown",
+                                    key="export_chat_btn",
+                                    use_container_width=True,
+                                )
+                            else:
+                                st.button("导出对话", disabled=True, key="export_chat_disabled_btn", use_container_width=True)
+                        else:
+                            st.button("导出对话", disabled=True, key="export_chat_nosession_btn", use_container_width=True)
+                    else:
+                        st.button("导出对话", disabled=True, key="export_chat_empty_btn", use_container_width=True)
+                with col_btn3:
+                    if st.button("清空", key="clear_chat_btn", use_container_width=True):
+                        st.session_state["chat_messages"] = []
+                        st.session_state["chat_session_id"] = None
+                        st.rerun()
+
+                # 展示对话历史
+                chat_container = st.container()
+                with chat_container:
+                    for msg in st.session_state["chat_messages"]:
+                        with st.chat_message(msg["role"]):
+                            st.markdown(msg["content"])
+
+                # 用户输入（Streamlit 的 chat_input 固定在页面底部）
+                user_input = st.chat_input(
+                    "输入您的问题，例如：这只基金近期走势如何？",
+                    key="chat_user_input",
+                )
+
+                if user_input:
+                    if not nav_context:
+                        st.warning("请先在「查询净值」中查询一只基金，再进行对话")
+                    else:
+                        # 首次发消息时自动创建会话
+                        if not st.session_state.get("chat_session_id"):
+                            fund_name = nav_query_result["fund_name"] if nav_query_result else ""
+                            fund_code = nav_query_result["fund_code"] if nav_query_result else ""
+                            title = f"{fund_name}（{fund_code}）对话"
+                            with get_db_context() as db:
+                                new_session = chat_service.create_session(
+                                    db, title=title,
+                                    fund_code=fund_code, fund_name=fund_name,
+                                    role_name=current_role["name"],
+                                )
+                                st.session_state["chat_session_id"] = new_session.id
+
+                        # 添加用户消息
+                        st.session_state["chat_messages"].append({"role": "user", "content": user_input})
+                        with get_db_context() as db:
+                            chat_service.add_message(db, st.session_state["chat_session_id"], "user", user_input)
+
+                        # 先显示用户消息
+                        with chat_container:
+                            with st.chat_message("user"):
+                                st.markdown(user_input)
+
+                        # 调用AI获取回复（带加载状态）
+                        with chat_container:
+                            with st.chat_message("assistant"):
+                                with st.spinner("AI 正在思考中..."):
+                                    response = chat_service.chat_with_nav_context(
+                                        messages=st.session_state["chat_messages"],
+                                        nav_context=nav_context,
+                                        system_prompt=current_role["system_prompt"],
+                                        temperature=current_role["temperature"],
+                                    )
+
+                        if response.success:
+                            st.session_state["chat_messages"].append(
+                                {"role": "assistant", "content": response.content}
+                            )
+                            with get_db_context() as db:
+                                chat_service.add_message(db, st.session_state["chat_session_id"], "assistant", response.content)
+                        else:
+                            # 对话失败，移除用户消息
+                            st.session_state["chat_messages"].pop()
+                            st.session_state["_chat_error"] = f"对话失败：{response.error}"
+
+                        # rerun 让新消息自然出现在对话底部
+                        st.rerun()
+
+                # 显示错误信息（如果有）
+                if "_chat_error" in st.session_state:
+                    st.error(st.session_state.pop("_chat_error"))
+
+                st.divider()
+
+                # ---- 历史对话 ----
+                with st.expander("历史对话"):
+                    with get_db_context() as db:
+                        recent_sessions = chat_service.get_recent_sessions(db, limit=20)
+                        sessions_data = [
+                            {"id": s.id, "title": s.title, "fund_code": s.fund_code or "",
+                             "fund_name": s.fund_name or "", "role_name": s.role_name,
+                             "message_count": s.message_count,
+                             "updated_at": s.updated_at.strftime("%m-%d %H:%M"),
+                             "created_at": s.created_at.strftime("%Y-%m-%d %H:%M")}
+                            for s in recent_sessions
+                        ]
+
+                    if not sessions_data:
+                        st.caption("暂无历史对话")
+                    else:
+                        for i, s in enumerate(sessions_data):
+                            col_s1, col_s2, col_s3, col_s4 = st.columns([4, 1, 1, 1])
+                            with col_s1:
+                                label = f"{s['title']}"
+                                if s["message_count"] > 0:
+                                    label += f"（{s['message_count']}条）"
+                                st.markdown(f"**{label}**")
+                                st.caption(f"{s['updated_at']} | {s['role_name']}")
+                            with col_s2:
+                                if st.button("加载", key=f"load_session_{s['id']}", use_container_width=True):
+                                    with get_db_context() as db:
+                                        loaded_msgs = chat_service.get_session_messages(db, s["id"])
+                                    st.session_state["chat_messages"] = loaded_msgs
+                                    st.session_state["chat_session_id"] = s["id"]
+                                    if s["fund_code"]:
+                                        st.session_state["chat_fund_code"] = s["fund_code"]
+                                    st.rerun()
+                            with col_s3:
+                                # 导出按钮
+                                with get_db_context() as db:
+                                    export_md = chat_service.export_session_markdown(db, s["id"])
+                                if export_md:
+                                    st.download_button(
+                                        "导出",
+                                        data=export_md,
+                                        file_name=f"chat_{s['fund_code'] or 'session'}_{s['id']}.md",
+                                        mime="text/markdown",
+                                        key=f"export_session_{s['id']}",
+                                        use_container_width=True,
+                                    )
+                            with col_s4:
+                                if st.button("删除", key=f"del_session_{s['id']}", use_container_width=True):
+                                    with get_db_context() as db:
+                                        chat_service.delete_session(db, s["id"])
+                                    # 如果删除的是当前会话，清空
+                                    if st.session_state.get("chat_session_id") == s["id"]:
+                                        st.session_state["chat_messages"] = []
+                                        st.session_state["chat_session_id"] = None
+                                    st.rerun()
+
+                st.caption(f"当前模型：{settings.llm_model} | 角色：{current_role['name']}")
+                st.caption("AI回答仅供研究参考，不构成投资建议。投资有风险，入市需谨慎。")
 
 
 # ============================================================

@@ -16,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.data import (
+    ChatRole,
     Fund,
     FundType,
     Holding,
@@ -33,6 +34,16 @@ def create_tables() -> None:
     print("正在创建数据库表...")
     init_db()
     print("数据库表创建完成！")
+
+
+def init_default_roles() -> None:
+    """初始化默认AI对话角色"""
+    print("\n正在检查AI对话角色...")
+    with get_db_context() as db:
+        from app.services import chat_service
+        chat_service.init_default_roles(db)
+        role_count = db.query(ChatRole).count()
+        print(f"  AI对话角色：{role_count} 个")
 
 
 def insert_test_data() -> None:
@@ -210,12 +221,14 @@ def verify_data() -> None:
         nav_count = db.query(NavHistory).count()
         signal_count = db.query(Signal).count()
         report_count = db.query(Report).count()
+        role_count = db.query(ChatRole).count()
 
         print(f"  funds 表：{fund_count} 条")
         print(f"  holdings 表：{holding_count} 条")
         print(f"  nav_history 表：{nav_count} 条")
         print(f"  signals 表：{signal_count} 条")
         print(f"  reports 表：{report_count} 条")
+        print(f"  chat_roles 表：{role_count} 条")
 
         # 查询示例
         if fund_count > 0:
@@ -238,6 +251,9 @@ def main() -> None:
 
     # 1. 创建表
     create_tables()
+
+    # 1.5 初始化默认角色
+    init_default_roles()
 
     # 2. 询问是否插入测试数据
     if len(sys.argv) > 1 and sys.argv[1] == "--with-test-data":
